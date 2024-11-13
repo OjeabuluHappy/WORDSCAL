@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .calculator {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            width: 500px;
+        }
+
+        .display {
+            background-color: #3d3d3d;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            min-height: 60px;
+            word-wrap: break-word;
+        }
+
+        #numberInput {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #3d3d3d;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 5px;
+            font-size: 18px;
+        }
+
+        #wordsOutput {
+            font-size: 16px;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+
+        #explanation {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        button {
+            padding: 15px;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4d4d4d;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #5d5d5d;
+        }
+
+        .operator {
+            background-color: #ff9500;
+        }
+
+        .operator:hover {
+            background-color: #ffaa33;
+        }
+
+        .clear {
+            background-color: #ff3b30;
+        }
+
+        .clear:hover {
+            background-color: #ff4d44;
+        }
+
+        .examples {
+            color: #888;
+            font-size: 12px;
+            margin-top: 15px;
+            padding: 10px;
+            border-top: 1px solid #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <input type="text" id="numberInput" placeholder="Type your calculation or question..." autofocus>
+        <div class="display">
+            <div id="wordsOutput">Zero</div>
+            <div id="explanation"></div>
+        </div>
+        <div class="buttons">
+            <button onclick="appendNumber('7')">7</button>
+            <button onclick="appendNumber('8')">8</button>
+            <button onclick="appendNumber('9')">9</button>
+            <button class="operator" onclick="appendOperator('/')">/</button>
+            <button onclick="appendNumber('4')">4</button>
+            <button onclick="appendNumber('5')">5</button>
+            <button onclick="appendNumber('6')">6</button>
+            <button class="operator" onclick="appendOperator('*')">×</button>
+            <button onclick="appendNumber('1')">1</button>
+            <button onclick="appendNumber('2')">2</button>
+            <button onclick="appendNumber('3')">3</button>
+            <button class="operator" onclick="appendOperator('-')">-</button>
+            <button onclick="appendNumber('0')">0</button>
+            <button onclick="appendNumber('.')">.</button>
+            <button class="operator" onclick="calculate()">=</button>
+            <button class="operator" onclick="appendOperator('+')">+</button>
+            <button class="clear" onclick="clearInput()">C</button>
+            <button class="operator" onclick="appendNumber('%')">%</button>
+        </div>
+        <div class="examples">
+            Try these: "2000 times 8000", "what is 5% of 2 million", 
+            "If I have 120 apples and give away 30%, how many do I have left?",
+            "twelve plus twenty four"
+        </div>
+    </div>
+
+    <script>
+        const numberInput = document.getElementById('numberInput');
+        const wordsOutput = document.getElementById('wordsOutput');
+        const explanation = document.getElementById('explanation');
+
+        const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+        const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+        const teens = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+
+        // Word to number mapping
+        const wordToNumber = {
+            'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
+            'ten': 10, 'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15, 'sixteen': 16,
+            'seventeen': 17, 'eighteen': 18, 'nineteen': 19, 'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50,
+            'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90
+        };
+
+        // Operation mapping
+        const operationMap = {
+            'plus': '+',
+            'add': '+',
+            'minus': '-',
+            'subtract': '-',
+            'times': '*',
+            'multiply': '*',
+            'multiplied by': '*',
+            'divided by': '/',
+            'divide': '/'
+        };
+
+        function convertWordsToNumbers(text) {
+            let words = text.toLowerCase().split(' ');
+            let result = '';
+            
+            for (let i = 0; i < words.length; i++) {
+                let word = words[i];
+                
+                // Handle operations
+                if (operationMap[word]) {
+                    result += ` ${operationMap[word]} `;
+                    continue;
+                }
+
+                // Handle numbers written as words
+                if (wordToNumber.hasOwnProperty(word)) {
+                    result += wordToNumber[word];
+                    continue;
+                }
+
+                // Handle regular numbers and other characters
+                if (/^[0-9.,]+$/.test(word)) {
+                    result += word;
+                } else if (word === 'million') {
+                    result += '000000';
+                } else if (word === 'billion') {
+                    result += '000000000';
+                } else if (word === 'trillion') {
+                    result += '000000000000';
+                } else {
+                    result += ' ' + word;
+                }
+            }
+
+            return result;
+        }
+
+        function parseNumber(str) {
+            str = str.toLowerCase().replace(/\s+/g, ' ').trim();
+            if (str.includes('million')) {
+                return parseFloat(str) * 1000000;
+            } else if (str.includes('billion')) {
+                return parseFloat(str) * 1000000000;
+            } else if (str.includes('trillion')) {
+                return parseFloat(str) * 1000000000000;
+            }
+            return parseFloat(str.replace(/[^0-9.-]/g, ''));
+        }
+
+        function parseWordProblem(text) {
+            // Common word problem patterns
+            const patterns = [
+                {
+                    // Percentage remaining pattern
+                    regex: /if\s+i?\s*have\s+(\d+)\s+(\w+)\s+and\s+give\s+away\s+(\d+)%/i,
+                    solve: (matches) => {
+                        const initial = parseInt(matches[1]);
+                        const percentage = parseInt(matches[3]);
+                        const remaining = initial * (1 - percentage / 100);
+                        return {
+                            result: remaining,
+                            explanation: `${initial} - ${percentage}% = ${remaining} ${matches[2]}`
+                        };
+                    }
+                },
+                // Add more patterns here for different types of word problems
+            ];
+
+            for (let pattern of patterns) {
+                const matches = text.match(pattern.regex);
+                if (matches) {
+                    return pattern.solve(matches);
+                }
+            }
+
+            return null;
+        }
+
+        function parsePercentageQuery(input) {
+            const text = input.toLowerCase();
+            
+            const percentagePatterns = [
+                /what\s+is\s+(\d+\.?\d*)\s*%\s+of\s+(.+)/i,
+                /(\d+\.?\d*)\s*%\s+of\s+(.+)/i,
+            ];
+
+            for (let pattern of percentagePatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    const percentage = parseFloat(match[1]);
+                    const total = parseNumber(match[2]);
+                    return {
+                        percentage,
+                        total,
+                        result: (percentage / 100) * total
+                    };
+                }
+            }
+            return null;
+        }
+
+        function numberToWords(num) {
+            if (num === 0) return 'zero';
+            if (num < 0) return 'negative ' + numberToWords(Math.abs(num));
+            if (num < 1) return convertDecimal(num);
+
+            let words = '';
+            
+            if (num >= 1000000000000) {
+                words += numberToWords(Math.floor(num / 1000000000000)) + ' trillion ';
+                num %= 1000000000000;
+            }
+            
+            if (num >= 1000000000) {
+                words += numberToWords(Math.floor(num / 1000000000)) + ' billion ';
+                num %= 1000000000;
+            }
+            
+            if (num >= 1000000) {
+                words += numberToWords(Math.floor(num / 1000000)) + ' million ';
+                num %= 1000000;
+            }
+            
+            if (num >= 1000) {
+                words += numberToWords(Math.floor(num / 1000)) + ' thousand ';
+                num %= 1000;
+            }
+            
+            if (num >= 100) {
+                words += ones[Math.floor(num / 100)] + ' hundred ';
+                num %= 100;
+            }
+            
+            if (num > 0) {
+                if (words !== '') words += 'and ';
+                
+                if (num < 10) words += ones[num];
+                else if (num < 20) words += teens[num - 10];
+                else {
+                    words += tens[Math.floor(num / 10)];
+                    if (num % 10 > 0) words += '-' + ones[num % 10];
+                }
+            }
+            
+            return words.trim();
+        }
+
+        function convertDecimal(num) {
+            const decimalStr = num.toString().split('.')[1];
+            if (!decimalStr) return 'zero';
+            
+            let words = 'zero point';
+            for (let digit of decimalStr) {
+                words += ' ' + ones[parseInt(digit)];
+            }
+            return words;
+        }
+
+        function appendNumber(num) {
+            numberInput.value += num;
+            updateWords();
+        }
+
+        function appendOperator(op) {
+            numberInput.value += op;
+            updateWords();
+        }
+
+        function clearInput() {
+            numberInput.value = '';
+            wordsOutput.textContent = 'Zero';
+            explanation.textContent = '';
+        }
+
+        function calculate() {
+            try {
+                const input = numberInput.value;
+
+                // Try parsing as a word problem first
+                const wordProblem = parseWordProblem(input);
+                if (wordProblem) {
+                    wordsOutput.textContent = numberToWords(wordProblem.result);
+                    explanation.textContent = wordProblem.explanation;
+                    return;
+                }
+
+                // Try parsing as a percentage calculation
+                const percentageCalc = parsePercentageQuery(input);
+                if (percentageCalc) {
+                    const { percentage, total, result } = percentageCalc;
+                    wordsOutput.textContent = numberToWords(result);
+                    explanation.textContent = `${percentage}% of ${total.toLocaleString()} = ${result.toLocaleString()}`;
+                    return;
+                }
+
+                // Convert words to numbers and evaluate
+                const processedInput = convertWordsToNumbers(input);
+                const result = eval(processedInput);
+                numberInput.value = result;
+                wordsOutput.textContent = numberToWords(result);
+                explanation.textContent = `${input} = ${result.toLocaleString()}`;
+            } catch (error) {
+                wordsOutput.textContent = 'Error: Invalid expression';
+                explanation.textContent = 'Please check your input and try again';
+            }
+        }
+
+        function updateWords() {
+            try {
+                const input = numberInput.value;
+                if (!input) {
+                    wordsOutput.textContent = 'Zero';
+                    explanation.textContent = '';
+                    return;
+                }
+
+                // Only update for complete expressions
+                if (input.match(/^[\d\s+\-*/()%.]+$/)) {
+                    const result = eval(input);
+                    wordsOutput.textContent = numberToWords(result);
+                    explanation.textContent = `${input} = ${result.toLocaleString()}`;
+                }
+            } catch {
+                // Don't update if the expression is incomplete
+            }
+        }
+
+        // Add keyboard support
+        numberInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                calculate();
+            }
+        });
+
+        // Initial display
+        updateWords();
+    </script>
+</body>
+</html>
